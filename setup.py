@@ -103,12 +103,13 @@ def find_packages():
     Adapted from IPython's setupbase.py. Copyright IPython
     contributors, licensed under the BSD license.
     """
-    packages = ['mdprep']
+    packages = []
     for dir,subdirs,files in os.walk('mdprep'):
         package = dir.replace(os.path.sep, '.')
         if '__init__.py' not in files:
             # not a package
             continue
+        packages.append(package)
     return packages
 
 ################################################################################
@@ -122,5 +123,5 @@ setup(name='mdprep',
       license='LGPLv2.1+',
       url='http://github.com/badi/mdprep',
       platforms=['Linux', 'Mac OS-X', 'Unix', 'Windows'],
-      packages=['mdprep'],
+      packages=find_packages(),
       **setup_kws)
