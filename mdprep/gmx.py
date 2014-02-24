@@ -84,7 +84,7 @@ class GmxCommand(object):
 
     def process(self):
         cmd = self.cmd()
-        p = Process(cmd)
+        p = process.Process(cmd)
 
         try:
             p.run(self._log, self._logmode)
