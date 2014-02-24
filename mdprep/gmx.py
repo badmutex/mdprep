@@ -27,7 +27,9 @@ def command(name):
     """
     Return a subclass of GmxCommand and set the __cmd__ static field.
     """
-    return process.proc(name, GmxCommand)
+    cls = process.proc(name, GmxCommand)
+    cls.__cmd__ = name
+    return cls
 
 
 def cmd(name, **parms):
