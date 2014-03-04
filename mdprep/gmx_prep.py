@@ -81,7 +81,7 @@ class PrepareSolvatedSystem(object):
             p     = top,
             ff    = ff,
             water = water,
-            ignh  = ignh).run()
+            ignh  = ignh)
         self._top = top
         self._pn  = self.cn
 
@@ -98,12 +98,12 @@ class PrepareSolvatedSystem(object):
             c = suffix.gro(pn),
             p = suffix.top(pn),
             o = tpr
-            ).run()
+            )
         gmx.mdrun(
             s      = tpr,
             deffnm = cn,
             c      = suffix.pdb(cn),
-            ).run()
+            )
         self._pn = self._cn
 
     def solvate(self,
@@ -120,27 +120,27 @@ class PrepareSolvatedSystem(object):
             o = suffix.gro(nbox),
             bt = boxtype,
             d = boxdist,
-            ).run()
+            )
         self._cn = nwat
         gmx.genbox(
             cp = suffix.gro(nbox),
             cs = solv,
             p  = self.top,
             o  = suffix.gro(self.cn)
-            ).run()
+            )
         gmx.grompp(
             f = suffix.mdp(self.pn),
             c = suffix.gro(self.cn),
             p = self.top,
             o = suffix.tpr(self.cn)
-            ).run()
+            )
 
         # create atom indices for water
         pdb = suffix.pdb(self.cn)
         gmx.editconf(
             f = suffix.tpr(self.cn),
             o = pdb
-            ).run()
+            )
 
         top = prody.parsePDB(pdb)
         sel = top.select('resname is SOL')
@@ -164,7 +164,7 @@ class PrepareSolvatedSystem(object):
             neutral = neutral,
             pname   = pname,
             nname   = nname
-            ).run()
+            )
 
         # figure out the number of solvent, cation, and anion molecules
         logger.info1('Calculating number of solvent, cation, and anion molecules')
@@ -197,11 +197,11 @@ class PrepareSolvatedSystem(object):
             c = suffix.gro(self.cn),
             p = self.top,
             o = tpr
-            ).run()
+            )
         gmx.mdrun(
             s      = tpr,
             deffnm = self.cn,
-            ).run()
+            )
         self._pv = self.cn
 
 
@@ -230,12 +230,12 @@ class PrepareSolvatedSystem(object):
                 t = suffix.trr(self.pn),
                 p = self.top,
                 o = suffix.tpr(self.cn)
-                ).run()
+                )
             gmx.mdrun(
                 s      = suffix.tpr(self.cn),
                 deffnm = self.cn,
                 v      = True
-                ).run()
+                )
             self._pn = self.cn
             mdp.unset_velocity_generation()
 
@@ -254,12 +254,12 @@ class PrepareSolvatedSystem(object):
             t = suffix.trr(self.pn),
             p = self.top,
             o = suffix.tpr(self.cn)
-            ).run()
+            )
         gmx.mdrun(
             s      = suffix.tpr(self.cn),
             deffnm = self.cn,
             v      = True
-            ).run()
+            )
 
 
     def prepare(self,
@@ -313,4 +313,4 @@ class PrepareSolvatedSystem(object):
 
         # create tpr with velocities
         logger.info1('Creating run tpr')
-        gmx.grompp(t = suffix.trr(os.path.join(self.workarea, self.pn))).run()
+        gmx.grompp(t = suffix.trr(os.path.join(self.workarea, self.pn)))
