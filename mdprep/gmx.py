@@ -10,17 +10,13 @@ import subprocess
 import shlex
 
 __all__ = [
-           # 'GmxCommand',
-           # 'command',
-           # 'cmd',
-           'pdb2gmx',
-           'grompp',
-           'editconf',
-           'genion',
-           'genbox',
-           'mdrun',
-           ]
-
+    'pdb2gmx',
+    'grompp',
+    'editconf',
+    'genion',
+    'genbox',
+    'mdrun',
+]
 
 pdb2gmx  = process.optcmd('pdb2gmx')
 editconf = process.optcmd('editconf')
