@@ -103,6 +103,7 @@ class PrepareSolvatedSystem(object):
             s      = tpr,
             deffnm = cn,
             c      = suffix.pdb(cn),
+            nt     = 1,
             )
         self._pn = self._cn
 
