@@ -277,7 +277,8 @@ class PrepareSolvatedSystem(object):
                 seed           = None):
 
 
-        logger.info('Preparing %s with %s in %s' % (pdb, ff, os.getcwd()))
+        cwd = os.getcwd()
+        logger.info('Preparing %s with %s in %s' % (os.path.relpath(pdb, cwd), ff, cwd))
 
         pdb = os.path.abspath(pdb)
         wa  = os.path.join(self.workarea)
