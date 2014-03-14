@@ -35,6 +35,10 @@ class Command(object):
         self._cmd.extend(shlex.split(arg))
         return self
 
+    def add_to_task(self, task, remotename=None, cache=True):
+        remote = remotename if remotename is not None else os.path.basename(self._path)
+        task.specify_input_file(self._path, remote, cache=cache)
+
     def __str__(self):
         return '<%s>' % ' '.join(map(repr, self._cmd))
 
