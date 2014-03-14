@@ -21,7 +21,34 @@ class Process(object):
                 fd.write(err + '\n' + out)
         return out, err
 
-class OptCommand(object):
+
+class Command(object):
+    def __init__(self, path):
+        self._cmd = [path]
+
+    @property
+    def path(self):
+        return self._cmd[0]
+
+    def o(self, arg):
+        """Add CLI option"""
+        self._cmd.extend(shlex.split(arg))
+        return self
+
+    def __str__(self):
+        return '<%s>' % ' '.join(map(repr, self._cmd))
+
+    def __repr__(self):
+        s = 'Command(%r)' % self.path
+        for o in self._cmd[1:]:
+            s += '.o(%r)' % repr(o)
+        return s
+
+    def __call__(self):
+        return Process(self._cmd).run()
+
+
+class OptCommand(Command):
     """
     A process that can take short-form command line parameters as keyword
     arguments.  The order is arguments is not stable, this can only be
@@ -34,9 +61,6 @@ class OptCommand(object):
     Returns: (stdout, stderr)
     """
 
-    def __init__(self, cmd):
-        self._cmd = cmd
-
     def __call__(self, **kws):
         # prepare the parameters
         parms = list()
@@ -47,22 +71,8 @@ class OptCommand(object):
                 arg = flag
             else:
                 arg = '%s %s' % (flag, v)
-            parms.append(arg)
-        parms = ' '.join(parms)
-
-        # the command
-        cmd = self._cmd + ' ' + parms
+            self.o(arg)
 
         # run
-        return Process(cmd).run()
+        return super(Command, self).__call__()
 
-def proc(name, *supers):
-    supers = supers or (Process,)
-    cls    = type(name, supers, {})
-    cls.__name__ = name
-    return cls
-
-def optcmd(cmd, name=None):
-    name = name if name is not None else os.path.basename(cmd)
-    cls = type(name, (OptCommand,), {})
-    return cls(cmd)

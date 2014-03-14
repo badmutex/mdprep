@@ -40,10 +40,10 @@ class NoAutobackup(object):
             os.environ[self._k] = self._val
 
 
-pdb2gmx  = process.optcmd('pdb2gmx')
-editconf = process.optcmd('editconf')
-grompp   = process.optcmd('grompp')
-genion   = process.optcmd('genion')
-genbox   = process.optcmd('genbox')
-mdrun    = process.optcmd('mdrun')
+pdb2gmx  = process.OptCommand('pdb2gmx')
+editconf = process.OptCommand('editconf')
+grompp   = process.OptCommand('grompp')
+genion   = process.OptCommand('genion')
+genbox   = process.OptCommand('genbox')
+mdrun    = process.OptCommand('mdrun')
 
