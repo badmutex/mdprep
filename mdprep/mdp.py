@@ -1,13 +1,17 @@
-from . import log
-import StringIO
+from pxul.logging import logger
+
+from StringIO import StringIO
+
 import os
 import collections
 import copy
 from . import _yaml as yaml
 
-__all__ = ['MdpGroup', 'MDP']
-
-logger = log.getLogger()
+__all__ = [
+    'velocity_generation_group',
+    'MdpGroup',
+    'MDP',
+    ]
 
 def velocity_generation_group(temp, seed):
     g                    = MdpGroup('VELOCITY GENERATION')
@@ -44,43 +48,41 @@ class MdpGroup(object):
 
 
     def format(self):
-        s = StringIO.StringIO()
-        s.write('; ')
+        with StringIO() as s:
+            s.write('; ')
 
-        # comment for this group
-        if self.descr:
-            s.write(self.descr)
-        s.write('\n')
-
-        # the key/value pairs
-        for k, v in self._kv.iteritems():
-            s.write(k + ' = ')
-
-            ### cases: value is list of str, str, arbitrary
-
-            # [str]: stringify
-            if type(v) is list:
-                v_str = ' '.join(map(str, v))
-                s.write(v_str)
-
-            # str: write
-            elif type(v) is str:
-                s.write(v)
-
-            # obj:
-            else:
-                s.write(str(v))
-
-            # add line comments
-            if k in self._line_comments:
-                s.write(' ; ' + str(self._line_comments[k]))
-
-            # done
+            # comment for this group
+            if self.descr:
+                s.write(self.descr)
             s.write('\n')
 
-        as_str = s.getvalue()
-        s.close()
-        return as_str
+            # the key/value pairs
+            for k, v in self._kv.iteritems():
+                s.write(k + ' = ')
+
+                ### cases: value is list of str, str, arbitrary
+
+                # [str]: stringify
+                if type(v) is list:
+                    v_str = ' '.join(map(str, v))
+                    s.write(v_str)
+
+                # str: write
+                elif type(v) is str:
+                    s.write(v)
+
+                # obj:
+                else:
+                    s.write(str(v))
+
+                # add line comments
+                if k in self._line_comments:
+                    s.write(' ; ' + str(self._line_comments[k]))
+
+                # done
+                s.write('\n')
+
+            return s.getvalue()
 
     def __str__(self):
         return self.format()
@@ -159,14 +161,10 @@ class MDP(yaml.YAMLObject):
         self.set(k, v)
 
     def format(self):
-        s = StringIO.StringIO()
-
-        for g in self._groups.itervalues():
-            s.write(g.format() + '\n')
-
-        as_str = s.getvalue()
-        s.close()
-        return as_str
+        with StringIO() as s:
+            for g in self._groups.itervalues():
+                s.write(g.format() + '\n')
+            return s.getvalue()
 
     def __str__(self):
         return self.format()

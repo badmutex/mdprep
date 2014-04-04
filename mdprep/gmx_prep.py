@@ -1,7 +1,9 @@
-from . import log
 from . import gmx
-from . import util
 from . import mdp_defaults
+
+import pxul
+from pxul.logging import logger
+
 import mdtraj
 import prody
 prody.confProDy(verbosity='critical')
@@ -9,10 +11,6 @@ import textwrap
 import os
 import shutil
 import copy
-
-__all__ = ['Prep']
-
-logger = log.getLogger()
 
 
 def count_occurences(string, lines):
@@ -294,7 +292,7 @@ class PrepareSolvatedSystem(object):
         self.name = name
         self._cn  = name
 
-        with util.StackDir(wa):
+        with pxul.os.StackDir(wa):
             self.initialize(pdb, ff=ff, water=water, ignh=ignh)
             self.minimize_vacuum(mdp_min_vac)
             self.solvate(mdp_min_sol)

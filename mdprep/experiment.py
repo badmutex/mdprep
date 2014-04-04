@@ -2,19 +2,15 @@ from . import gmx_prep
 from . import mdp
 from . import state
 from . import _yaml as yaml
-from .util import StringIO
-from . import util
-from . import log
-logger = log.getLogger()
-import textwrap
+
+import pxul
+from pxul.StringIO import StringIO
+from pxul.logging import logger
+
 import collections
 import os
 import types
 
-__all__ = ['Run',
-           'GromacsRun',
-           'Experiment',
-           ]
 class Run(object):
     """
     A collection of parameters and inputs that can be run
@@ -34,7 +30,7 @@ class Run(object):
         return yaml.dump(self, default_flow_style=False)
 
     def save(self, prefix='.', name='run.yaml'):
-        util.ensure_dir(prefix)
+        pxul.os.ensure_dir(prefix)
         ypath = os.path.join(prefix, name)
         with open(ypath, 'w') as fd:
             logger.info1('Saving', fd.name)
@@ -151,22 +147,20 @@ class Experiment(object):
                 i_values[i].add(e.inputs[i])
 
         ### create summary
-        si = StringIO()
-        si.writeln('Experiment: %d runs' % len(self.runs))
-        si.indent()
-        si.writeln('Parameters of (values):')
-        si.indent()
-        for p in parms: si.writeln('- %s: [%s]' % (p, ', '.join(map(str, p_values[p]))))
-        si.dedent()
-        si.writeln('Inputs of (count):')
-        si.indent()
-        for i in inputs: si.writeln('- %s: %s' % (i, len(i_values[i])))
-        si.dedent()
-        si.dedent()
-        s = si.getvalue()
-        si.close()
+        with StringIO() as si:
+            si.writeln('Experiment: %d runs' % len(self.runs))
+            si.indent()
+            si.writeln('Parameters of (values):')
+            si.indent()
+            for p in parms: si.writeln('- %s: [%s]' % (p, ', '.join(map(str, p_values[p]))))
+            si.dedent()
+            si.writeln('Inputs of (count):')
+            si.indent()
+            for i in inputs: si.writeln('- %s: %s' % (i, len(i_values[i])))
+            si.dedent()
+            si.dedent()
 
-        return s.strip() # strip to remove trailing newline
+            return si.getvalue().strip() # strip to remove trailing newline
 
     def __str__(self):
         return self.summary()
@@ -176,7 +170,7 @@ class Experiment(object):
 
     def save(self, prefix=None, name='experiment.yaml'):
         prefix = self.name if prefix is None else prefix
-        util.ensure_dir(prefix)
+        pxul.os.ensure_dir(prefix)
         ypath = os.path.join(prefix, name)
         with  open(ypath, 'w') as fd:
             logger.info('Saving experiments:', fd.name)

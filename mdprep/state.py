@@ -1,4 +1,5 @@
-from . import util
+import pxul
+
 from . import _yaml as yaml
 import collections
 
@@ -18,7 +19,7 @@ class State(object):
 
     @classmethod
     def load(csl, path):
-        util.ensure_file(path)
+        pxul.os.ensure_file(path)
         st = yaml.load(open(path))
         if st: return st
         else  : return csl()
