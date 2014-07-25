@@ -267,6 +267,7 @@ class PrepareSolvatedSystem(object):
 
     def prepare(self,
                 pdb,
+                name           = None,
                 ff             = 'amber03',
                 water          = 'tip3p',
                 ignh           = True,
@@ -303,18 +304,30 @@ class PrepareSolvatedSystem(object):
             self.relax(copy.deepcopy(mdp_run), gammas=iter_gammas, steps=iter_steps)
             self.equilibrate(copy.deepcopy(mdp_run), steps=eq_steps)
 
-        conf = 'conf.gro',  suffix.gro(self.pn)
-        top  = 'topol.top', self.top
-        itp  = 'posre.itp', 'posre.itp'
+        if not name:
+            absp = os.path.abspath(pdb)
+            base = os.path.basename(absp)
+            name = os.path.splitext(base)[0]
+
+        conf = suffix.gro(name), suffix.gro(self.pn)
+        top  = suffix.top(name), self.top
+        itp  = suffix.itp(name), 'posre.itp'
+        mdp  = suffix.mdp(name)
 
         for new, old in [conf, top, itp]:
             shutil.copy(os.path.join(self.workarea, old), new)
             logger.info1('Saved file %s' % os.path.abspath(new))
 
-        with open('grompp.mdp', 'w') as fd:
+        with open(mdp, 'w') as fd:
             fd.write(str(mdp_run))
             logger.info1('Saved file', os.path.abspath(fd.name))
 
         # create tpr with velocities
         logger.info1('Creating run tpr')
-        gmx.grompp(t = suffix.trr(os.path.join(self.workarea, self.pn)))
+        conf  = conf[0]
+        top   = top[0]
+        mdout = suffix.mdp('{}_mdout'.format(name))
+        tpr   = suffix.tpr(name)
+        gmx.grompp(f=mdp, c=conf, po=mdout, p=top, o=tpr, t=suffix.trr(os.path.join(self.workarea, self.pn)))
+
+        return dict(conf=conf,top=top,mdout=mdout,tpr=tpr)
