@@ -52,6 +52,10 @@ class suffix(object):
     @classmethod
     def trr(cls, n): return cls.suffix(n, 'trr')
 
+    @classmethod
+    def itp(cls, n): return cls.suffix(n, 'itp')
+
+
 
 class PrepareSolvatedSystem(object):
     def __init__(self, workarea='mdprep'):
