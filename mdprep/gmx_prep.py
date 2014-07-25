@@ -72,6 +72,12 @@ class SystemPreparer(object):
 
     def set_name(self, n): self._name = n
 
+    def get_name(self, path):
+        """
+        The `name` is the basename of `path` stripped of the suffix
+        """
+        return os.path.splitext(os.path.basename(path))[0]
+
     @property
     def workarea(self): return self._workarea
 
@@ -94,7 +100,11 @@ class SystemPreparer(object):
     def top(self,new): self._top = new
 
 
-class PrepareSolvatedSystem(SystemPreparer):
+
+    def next_name(self):
+        self.pn = self.cn
+
+
     def initialize(self, pdb, ff='amber03', water='tip3p', ignh=True):
         logger.info1('Importing to GMX format')
         top = suffix.top(self.cn)
@@ -106,7 +116,7 @@ class PrepareSolvatedSystem(SystemPreparer):
             water = water,
             ignh  = ignh)
         self.top = top
-        self.pn  = self.cn
+        self.next_name()
 
 
     def minimize_vacuum(self, mdp):
@@ -125,10 +135,11 @@ class PrepareSolvatedSystem(SystemPreparer):
         gmx.mdrun(
             s      = tpr,
             deffnm = cn,
-            c      = suffix.pdb(cn),
+            c      = output_to(cn),
             nt     = 1,
             )
-        self.pn = self.cn
+        self.next_name()
+
 
     def solvate(self,
                      mdp, boxtype='triclinic', boxdist=1.0, solv='spc216.gro',
@@ -226,7 +237,7 @@ class PrepareSolvatedSystem(SystemPreparer):
             s      = tpr,
             deffnm = self.cn,
             )
-        self.pn = self.cn
+        self.next_name()
 
 
     def relax(self, mdp, gammas=None, steps=None):
@@ -260,7 +271,7 @@ class PrepareSolvatedSystem(SystemPreparer):
                 deffnm = self.cn,
                 v      = True
                 )
-            self.pn = self.cn
+            self.next_name()
             mdp.unset_velocity_generation()
 
     def equilibrate(self, mdp, steps=None):
