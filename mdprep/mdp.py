@@ -1,6 +1,6 @@
 from pxul.logging import logger
 
-from StringIO import StringIO
+from pxul.StringIO import StringIO
 
 import os
 import collections
