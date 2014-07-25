@@ -66,6 +66,14 @@ class SystemPreparer(object):
         self._pn       = None      # previous name
         self._top      = None      # path to topology file
 
+        self._md_steps = [] # [(function, args, kwds)]
+
+    def register_md_step(self, fn, *args, **kws):
+        self._md_steps.append((fn, args, kws))
+
+    def register_mdp(self, mdp):
+        self._mdp_run = mdp
+
 
     @property
     def name(self): return self._name
@@ -138,6 +146,79 @@ class SystemPreparer(object):
             nt     = 1,
             )
         self.next_name()
+
+    def equilibrate(self, mdp, steps=None, gen_velocities=True):
+        logger.info1('Equilibrating')
+        self.cn = self.name + '_eq'
+        if steps is not None:
+            mdp.nsteps = steps
+        mdp_path = suffix.mdp(self.cn)
+        if gen_velocities:
+            mdp.set_velocity_generation()
+        else:
+            mdp.unset_velocity_generation()
+        mdp.save(mdp_path)
+
+        gmx.grompp(
+            f = mdp_path,
+            c = suffix.gro(self.pn),
+            t = suffix.trr(self.pn),
+            p = self.top,
+            o = suffix.tpr(self.cn)
+            )
+        gmx.mdrun(
+            s      = suffix.tpr(self.cn),
+            deffnm = self.cn,
+            v      = True
+            )
+
+    def prepare(self, pdb,
+                seed = None):
+
+        cwd = os.getcwd()
+        logger.info('Preparing %s in %s' % (os.path.relpath(pdb, cwd), cwd))
+
+        pdb = os.path.abspath(pdb)
+        wa  = os.path.join(self.workarea)
+        name = os.path.splitext(os.path.basename(pdb))[0]
+
+        if seed is not None:
+            mdp_run.seed(seed)
+
+        self.set_name(name)
+        self.cn  = name
+
+        with pxul.os.StackDir(wa):
+            pxul.os.clear_dir(os.getcwd())
+            for fn, args, kws in self._md_steps:
+                fn(*args, **kws)
+
+        if not name:
+            name = self.name
+
+        conf = suffix.gro(name), suffix.gro(self.pn)
+        top  = suffix.top(name), self.top
+        itp  = suffix.itp(name), 'posre.itp'
+        mdp  = suffix.mdp(name)
+
+        for new, old in [conf, top, itp]:
+            shutil.copy(os.path.join(self.workarea, old), new)
+            logger.info1('Saved file %s' % os.path.abspath(new))
+
+        with open(mdp, 'w') as fd:
+            fd.write(str(self._mdp_run))
+            logger.info1('Saved file', os.path.abspath(fd.name))
+
+        # create tpr with velocities
+        logger.info1('Creating run tpr')
+        conf  = conf[0]
+        top   = top[0]
+        mdout = suffix.mdp('{}_mdout'.format(name))
+        tpr   = suffix.tpr(name)
+        gmx.grompp(f=mdp, c=conf, po=mdout, p=top, o=tpr, t=suffix.trr(os.path.join(self.workarea, self.cn)))
+
+        return dict(conf=conf,top=top,mdout=mdout,tpr=tpr)
+
 
 class PrepareSolvatedSystem(SystemPreparer):
 
@@ -275,31 +356,6 @@ class PrepareSolvatedSystem(SystemPreparer):
             self.next_name()
             mdp.unset_velocity_generation()
 
-    def equilibrate(self, mdp, steps=None, gen_velocities=True):
-        logger.info1('Equilibrating')
-        self.cn = self.name + '_eq'
-        if steps is not None:
-            mdp.nsteps = steps
-        mdp_path = suffix.mdp(self.cn)
-        if gen_velocities:
-            mdp.set_velocity_generation()
-        else:
-            mdp.unset_velocity_generation()
-        mdp.save(mdp_path)
-
-        gmx.grompp(
-            f = mdp_path,
-            c = suffix.gro(self.pn),
-            t = suffix.trr(self.pn),
-            p = self.top,
-            o = suffix.tpr(self.cn)
-            )
-        gmx.mdrun(
-            s      = suffix.tpr(self.cn),
-            deffnm = self.cn,
-            v      = True
-            )
-
 
     def prepare(self,
                 pdb,
@@ -315,58 +371,20 @@ class PrepareSolvatedSystem(SystemPreparer):
                 seed           = None):
 
 
-        cwd = os.getcwd()
-        logger.info('Preparing %s with %s in %s' % (os.path.relpath(pdb, cwd), ff, cwd))
-
-        pdb = os.path.abspath(pdb)
-        wa  = os.path.join(self.workarea)
-        name = os.path.splitext(os.path.basename(pdb))[0]
-
         mdp_min_vac = mdp_defaults.minimize_vacuum()   if mdp_min_vac is None else mdp_min_vac.copy()
         mdp_min_sol = mdp_defaults.minimize_solvated() if mdp_min_sol is None else mdp_min_sol.copy()
         mdp_run     = mdp_defaults.explicit_solvent()  if mdp_run     is None else mdp_run.copy()
 
-        if seed is not None:
-            mdp_run.seed(seed)
+        self.register_md_step(self.initialize, os.path.abspath(pdb), ff=ff, water=water, ignh=ignh)
+        self.register_md_step(self.minimize_vacuum, mdp_min_vac)
+        self.register_md_step(self.solvate, mdp_min_sol)
+        self.register_md_step(self.relax, copy.deepcopy(mdp_run), gammas=iter_gammas, steps=iter_steps)
+        self.register_md_step(self.equilibrate, copy.deepcopy(mdp_run), steps=eq_steps)
+        self.register_mdp(mdp_run)
 
-        self.set_name(name)
-        self.cn  = name
+        return super(PrepareSolvatedSystem, self).prepare(pdb, seed=seed)
 
-        with pxul.os.StackDir(wa):
-            pxul.os.clear_dir(os.getcwd())
-            self.initialize(pdb, ff=ff, water=water, ignh=ignh)
-            self.minimize_vacuum(mdp_min_vac)
-            self.solvate(mdp_min_sol)
-            self.relax(copy.deepcopy(mdp_run), gammas=iter_gammas, steps=iter_steps)
-            self.equilibrate(copy.deepcopy(mdp_run), steps=eq_steps)
-
-        if not name:
-            name = self.name
-
-        conf = suffix.gro(name), suffix.gro(self.pn)
-        top  = suffix.top(name), self.top
-        itp  = suffix.itp(name), 'posre.itp'
-        mdp  = suffix.mdp(name)
-
-        for new, old in [conf, top, itp]:
-            shutil.copy(os.path.join(self.workarea, old), new)
-            logger.info1('Saved file %s' % os.path.abspath(new))
-
-        with open(mdp, 'w') as fd:
-            fd.write(str(mdp_run))
-            logger.info1('Saved file', os.path.abspath(fd.name))
-
-        # create tpr with velocities
-        logger.info1('Creating run tpr')
-        conf  = conf[0]
-        top   = top[0]
-        mdout = suffix.mdp('{}_mdout'.format(name))
-        tpr   = suffix.tpr(name)
-        gmx.grompp(f=mdp, c=conf, po=mdout, p=top, o=tpr, t=suffix.trr(os.path.join(self.workarea, self.cn)))
-
-        return dict(conf=conf,top=top,mdout=mdout,tpr=tpr)
-
-class PrepareImplicitSolventSystem(PrepareSolvatedSystem):
+class PrepareImplicitSolventSystem(SystemPreparer):
 
     def prepare(self,
                 pdb,
@@ -380,51 +398,12 @@ class PrepareImplicitSolventSystem(PrepareSolvatedSystem):
                 eq_steps = 500,
                 seed = None):
 
-        cwd = os.getcwd()
-        logger.info('Preparing %s with %s in %s' % (os.path.relpath(pdb, cwd), ff, cwd))
-
-        pdb = os.path.abspath(pdb)
-        wa  = os.path.join(self.workarea)
-        name = os.path.splitext(os.path.basename(pdb))[0]
-
         mdp_min = mdp_defaults.minimize_implicit_solvent() if mdp_min is None else mdp_min.copy()
         mdp_run = mdp_defaults.implicit_solvent()          if mdp_run is None else mdp_run.copy()
 
-        if seed is not None:
-            mdp_run.seed(seed)
+        self.register_md_step(self.initialize      , os.path.abspath(pdb)  , ff=ff, water=water   , ignh=ignh)
+        self.register_md_step(self.minimize_vacuum , mdp_min               , output_to=suffix.gro)
+        self.register_md_step(self.equilibrate     , copy.deepcopy(mdp_run), steps=eq_steps)
+        self.register_mdp(mdp_run)
 
-        self.set_name(name)
-        self.cn  = name
-
-        with pxul.os.StackDir(wa):
-            pxul.os.clear_dir(os.getcwd())
-            self.initialize(pdb, ff=ff, water=water, ignh=ignh)
-            self.minimize_vacuum(mdp_min, output_to=suffix.gro)
-            self.equilibrate(copy.deepcopy(mdp_run), steps=eq_steps)
-
-
-        if not name:
-            name = self.name
-
-        conf = suffix.gro(name), suffix.gro(self.pn)
-        top  = suffix.top(name), self.top
-        itp  = suffix.itp(name), 'posre.itp'
-        mdp  = suffix.mdp(name)
-
-        for new, old in [conf, top, itp]:
-            shutil.copy(os.path.join(self.workarea, old), new)
-            logger.info1('Saved file %s' % os.path.abspath(new))
-
-        with open(mdp, 'w') as fd:
-            fd.write(str(mdp_run))
-            logger.info1('Saved file', os.path.abspath(fd.name))
-
-        # create tpr with velocities
-        logger.info1('Creating run tpr')
-        conf  = conf[0]
-        top   = top[0]
-        mdout = suffix.mdp('{}_mdout'.format(name))
-        tpr   = suffix.tpr(name)
-        gmx.grompp(f=mdp, c=conf, po=mdout, p=top, o=tpr, t=suffix.trr(os.path.join(self.workarea, self.cfgn)))
-
-        return dict(conf=conf,top=top,mdout=mdout,tpr=tpr)
+        return super(PrepareImplicitSolventSystem, self).prepare(pdb, seed=seed)
