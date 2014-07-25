@@ -267,7 +267,6 @@ class PrepareSolvatedSystem(object):
 
     def prepare(self,
                 pdb,
-                name           = None,
                 ff             = 'amber03',
                 water          = 'tip3p',
                 ignh           = True,
@@ -305,9 +304,7 @@ class PrepareSolvatedSystem(object):
             self.equilibrate(copy.deepcopy(mdp_run), steps=eq_steps)
 
         if not name:
-            absp = os.path.abspath(pdb)
-            base = os.path.basename(absp)
-            name = os.path.splitext(base)[0]
+            name = self.name
 
         conf = suffix.gro(name), suffix.gro(self.pn)
         top  = suffix.top(name), self.top
