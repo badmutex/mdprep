@@ -126,7 +126,7 @@ class SystemPreparer(object):
         self.top = top
         self.next_name()
 
-    def minimize_vacuum(self, mdp, output_to=suffix.pdb):
+    def minimize(self, mdp, output_to=suffix.pdb):
         logger.info1('Minimization')
         self.cn = self.name + '_EM'
         cn, pn = self.cn, self.pn
@@ -375,10 +375,10 @@ class PrepareSolvatedSystem(SystemPreparer):
         mdp_min_sol = mdp_defaults.minimize_solvated() if mdp_min_sol is None else mdp_min_sol.copy()
         mdp_run     = mdp_defaults.explicit_solvent()  if mdp_run     is None else mdp_run.copy()
 
-        self.register_md_step(self.initialize, os.path.abspath(pdb), ff=ff, water=water, ignh=ignh)
-        self.register_md_step(self.minimize_vacuum, mdp_min_vac)
-        self.register_md_step(self.solvate, mdp_min_sol)
-        self.register_md_step(self.relax, copy.deepcopy(mdp_run), gammas=iter_gammas, steps=iter_steps)
+        self.register_md_step(self.initialize , os.path.abspath(pdb), ff=ff, water=water, ignh=ignh)
+        self.register_md_step(self.minimize   , mdp_min_vac)
+        self.register_md_step(self.solvate    , mdp_min_sol)
+        self.register_md_step(self.relax      , copy.deepcopy(mdp_run), gammas=iter_gammas, steps=iter_steps)
         self.register_md_step(self.equilibrate, copy.deepcopy(mdp_run), steps=eq_steps)
         self.register_mdp(mdp_run)
 
@@ -401,9 +401,9 @@ class PrepareImplicitSolventSystem(SystemPreparer):
         mdp_min = mdp_defaults.minimize_implicit_solvent() if mdp_min is None else mdp_min.copy()
         mdp_run = mdp_defaults.implicit_solvent()          if mdp_run is None else mdp_run.copy()
 
-        self.register_md_step(self.initialize      , os.path.abspath(pdb)  , ff=ff, water=water   , ignh=ignh)
-        self.register_md_step(self.minimize_vacuum , mdp_min               , output_to=suffix.gro)
-        self.register_md_step(self.equilibrate     , copy.deepcopy(mdp_run), steps=eq_steps)
+        self.register_md_step(self.initialize , os.path.abspath(pdb)  , ff=ff, water=water   , ignh=ignh)
+        self.register_md_step(self.minimize   , mdp_min               , output_to=suffix.gro)
+        self.register_md_step(self.equilibrate, copy.deepcopy(mdp_run), steps=eq_steps)
         self.register_mdp(mdp_run)
 
         return super(PrepareImplicitSolventSystem, self).prepare(pdb, seed=seed)
