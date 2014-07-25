@@ -32,6 +32,17 @@ def minimize_solvated():
     m.pbc   = 'xyz'
     return m
 
+def minimize_implicit_solvent():
+    m = minimize_vacuum()
+    m.coulombtype = 'cut-off'
+    g = MdpGroup('Implicit Solvent')
+    g.implicit_solvent = 'GBSA'
+    g.gb_algorithm = 'OBC'
+    g.rgbradii = 1.0
+    g.sa_surface_tension = 2.25936
+    m.add(g)
+    return m
+
 def explicit_solvent(velocity_generation=False):
 
     m                    = MDP()
