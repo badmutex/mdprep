@@ -21,4 +21,4 @@ grompp   = OptCommand('grompp', short_flag_prefix='-', long_flag_prefix='-')
 genion   = OptCommand('genion', short_flag_prefix='-', long_flag_prefix='-')
 genbox   = OptCommand('genbox', short_flag_prefix='-', long_flag_prefix='-')
 mdrun    = OptCommand('mdrun', short_flag_prefix='-', long_flag_prefix='-')
-
+gmxdump  = OptCommand('gmxdump', short_flag_prefix='-', long_flag_prefix='-')
