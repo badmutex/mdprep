@@ -6,3 +6,4 @@ import mdp_defaults
 import gmx_prep
 from . import _yaml as yaml
 from . import xpm
+from . import gps
