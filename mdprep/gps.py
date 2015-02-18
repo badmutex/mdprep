@@ -7,6 +7,7 @@ import numpy as np
 
 import re
 import textwrap
+from cStringIO import StringIO
 
 def write_array(fd, vector, fmt='%f'):
 
@@ -54,3 +55,30 @@ def read_array(fd):
 
 def read_scalar(fd, mktype):
     return mktype(fd.readline().strip())
+
+
+def _with_stringio(creator, retval, fn, *args, **kws):
+    fd = creator()
+    try:
+        val = fn(fd, *args, **kws)
+        if retval == 'cont':
+            return val
+        elif retval == 'str':
+            s = fd.getvalue()
+            return s
+        else:
+            raise ValueError, 'Unknown retval {}'.format(retval)
+    finally:
+        fd.close()
+
+def array2str(vector, fmt='%f'):
+    return _with_stringio(StringIO, 'str', lambda fd: write_array(fd, vector, fmt=fmt))
+
+def scalar2str(val):
+    return _with_stringio(StringIO, 'str', lambda fd: write_scalar(fd, val))
+
+def str2array(s):
+    return _with_stringio(lambda: StringIO(s), 'cont', read_array)
+
+def str2scalar(s, mktype):
+    return _with_stringio(lambda: StringIO(s), 'cont', lambda fd: read_scalar(fd, mktype))
