@@ -32,6 +32,80 @@ def minimize_solvated():
     m.pbc   = 'xyz'
     return m
 
+def minimize_implicit_solvent():
+    m = minimize_vacuum()
+    m.coulombtype = 'cut-off'
+    g = MdpGroup('Implicit Solvent')
+    g.implicit_solvent = 'GBSA'
+    g.gb_algorithm = 'OBC'
+    g.rgbradii = 1.0
+    g.sa_surface_tension = 2.25936
+    m.add(g)
+    return m
+
+def implicit_solvent(velocity_generation=False):
+    m                    = MDP()
+    g                    = MdpGroup('SETUP')
+    m.add(g)
+
+    g                    = MdpGroup('RUN CONTROL')
+    g.integrator         = 'sd'
+    g.ld_seed            = 42
+    g.dt                 = 0.001
+    g.nsteps             = -1
+    g.comm_mode          = 'angular'
+    m.add(g)
+
+    g                    = MdpGroup('OUTPUT CONTROL')
+    g.nstxout            = m.freq(100)
+    g.nstvout            = m.freq(100)
+    g.nstfout            = m.freq(100)
+    g.nstlog             = m.freq(100)
+    g.nstenergy          = m.freq(100)
+    g.nstxtcout          = m.freq(100)
+    g.xtc_grps           = 'System'
+    m.add(g)
+
+    g                    = MdpGroup('NEIGHBOR SEARCHING')
+    g.nstlist            = 0
+    g.ns_type            = 'simple'
+    g.pbc                = 'no'
+    g.periodic_molecules = 'no'
+    g.rlist              = 0
+    m.add(g)
+
+    g                    = MdpGroup('ELECTROSTATICS')
+    g.coulombtype        = 'cut-off'
+    g.rcoulomb           = 0
+    m.add(g)
+
+    g                    = MdpGroup('VdW')
+    g.vdwtype            = 'cut-off'
+    g.rvdw               = 0
+    m.add(g)
+
+    g                    = MdpGroup('TEMPERATURE COUPLING')
+    g.tcoupl             = 'no'
+    g.tc_grps            = ['System']
+    g.ref_t              = [330]
+    g.tau_t              = [1.0]
+    m.add(g)
+
+    g                    = MdpGroup('PRESSURE COUPLING')
+    g.pcoupl             = 'no'
+    m.add(g)
+
+    g                    = MdpGroup('BOND CONSTRAINTS')
+    g.constraints        = 'none'
+    m.add(g)
+
+    if velocity_generation:
+        g = velocity_generation_group(m)
+        m.add(g)
+
+
+    return m
+
 def explicit_solvent(velocity_generation=False):
 
     m                    = MDP()
